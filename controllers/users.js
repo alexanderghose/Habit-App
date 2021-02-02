@@ -99,6 +99,7 @@ function habitDetail(req, res, next) {
         role.habits.forEach(function(habit) {
             if(habit.id == req.params.id) {
                 res.render('users/habit', {
+                    user:req.user,
                     role, 
                     habit,
                     calculateStreak: calculateStreak,
@@ -204,6 +205,7 @@ function resetHabits(req, res, next) {
 function showHabits(req, res, next) {
     let person = req.user;
     res.render('users/habits', {
+        user:req.user,
         person,
         calculateStreak: calculateStreak,
     });
@@ -247,6 +249,7 @@ function showTasks(req, res, next) {
 function showAll(req, res, next) {
     let person = req.user;
     res.render('users/all', {
+        user:req.user,
         person,
         calculateStreak: calculateStreak,
     });
@@ -257,6 +260,7 @@ function setUTCOffset(req, res, next) {
     req.user.timezone_offset_in_hours = req.body.offset;
     req.user.save(function(err) {
         res.render('users/all', {
+            user:req.user,
             person,
             calculateStreak: calculateStreak,
         });
