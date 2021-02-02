@@ -109,9 +109,9 @@ function habitDetail(req, res, next) {
 }
 
 // calculate streak if given an array of dates in chronological order - ie., [5 days ago, 2 days ago, today]
-function calculateStreak(dates) {
+function calculateStreak(dates, timezone_offset_in_hours) {
     let current_date = new Date()
-    current_date.setHours(0,0,0,0)
+    current_date.setHours(timezone_offset_in_hours,0,0,0)
     let streak = 0
     for (let i = dates.length -1; i >= 0; i--) {
         while(i >= 0 && dates[i].getTime() == current_date.getTime()) {
