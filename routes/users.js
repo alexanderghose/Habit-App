@@ -24,6 +24,8 @@ router.put("/reset", usersCtrl.resetHabits);
 router.post("/task/new/:id", usersCtrl.addTask)
 router.delete("/task/delete/:id", usersCtrl.delTask)
 
+router.post('/setUTCOffset', usersCtrl.setUTCOffset)
+
 
 function isLoggedIn(req, res, next) {
   if ( req.isAuthenticated() ) return next();

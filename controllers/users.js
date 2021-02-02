@@ -16,7 +16,8 @@ module.exports = {
   showAll,
   completeHabit,
   incompleteHabit,
-  resetHabits
+  resetHabits,
+  setUTCOffset,
 };
 
 function index(req, res, next) {
@@ -110,7 +111,7 @@ function habitDetail(req, res, next) {
 // calculate streak if given an array of dates in chronological order - ie., [5 days ago, 2 days ago, today]
 function calculateStreak(dates) {
     let current_date = new Date()
-    current_date.setHours(0,0,0,0)
+    current_date.setHours(-1*timezone_offset_in_hours,0,0,0)
     let streak = 0
     for (let i = dates.length -1; i >= 0; i--) {
         while(i >= 0 && dates[i].getTime() == current_date.getTime()) {
@@ -152,7 +153,12 @@ function completeHabit(req, res, next) {
                 // warning: these dates are all local server time. ideal:UTC
                 // ideally, you'd ask the user for their timezone and store dates at usertime midnight for resetting correctly
                 let today = new Date()
-                today.setHours(0,0,0,0)
+                // let current_timezone_offset_in_hours = today.getTimezoneOffset() / 60;
+                // console.log("you are",current_timezone_offset_in_hours,"hours ahead of UTC")
+                // console.log("local time is",today.toLocaleString())
+                // today.setHours(-1*current_timezone_offset_in_hours,0,0,0)
+                // console.log("local time is",today.toLocaleString())
+                today.setHours(-1*req.user.timezone_offset_in_hours,0,0,0)
                 today_exists_in_log = habit.completed_dates.some(date_in_log => date_in_log.getTime() == today.getTime())
                 if (!today_exists_in_log) {
                     habit.completed_dates.push(today);
@@ -243,5 +249,16 @@ function showAll(req, res, next) {
     res.render('users/all', {
         person,
         calculateStreak: calculateStreak,
+    });
+}
+
+function setUTCOffset(req, res, next) {
+    let person = req.user;
+    req.user.timezone_offset_in_hours = req.body.offset;
+    req.user.save(function(err) {
+        res.render('users/all', {
+            person,
+            calculateStreak: calculateStreak,
+        });
     });
 }

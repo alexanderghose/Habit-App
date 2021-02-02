@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <% let today = new Date() %>
+    Current Server Time: <%= today.toLocaleString() %>
+    <br><br>
+    <form action="/users/setUTCOffset" method="POST">
+        <label>Set your UTC Offset for resets:</label>
+        <input name="offset" type="number" placeholder="<%= user.timezone_offset_in_hours %>">
+        <button>Ok</button>
+    </form>
+</body>
+</html>
