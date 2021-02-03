@@ -60,7 +60,7 @@ function delRole(req, res, next) {
 function roleDetail(req, res, next) {
     req.user.roles.forEach(function(role) {
         if(role.id == req.params.id) {
-            res.render('users/role', {role});
+            res.render('users/role', {role, calculateStreak: calculateStreak});
         }
     }); 
 }
