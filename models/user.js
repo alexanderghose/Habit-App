@@ -23,7 +23,7 @@ var userSchema = new mongoose.Schema({
     email: String,
     googleId: String,
     roles: [roleSchema],
-    timezone_offset_in_hours: {type: Number, default: 0},
+    UTC_offset_in_hours: {type: Number, default: 0},
 });
 
 module.exports = mongoose.model('User', userSchema);

@@ -67,6 +67,29 @@
   <% } %>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <% if (user) { %>
+  <script>
+    // secretly send their timezone offset to the server
+    async function sendTZOffsetToServer() {
+      let payload = JSON.stringify({
+          offset: new Date().getTimezoneOffset() / 60,
+      })
+      console.log("payload", payload)
+      try {
+        let res = await fetch('/users/setUTCOffset', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: payload,
+        });
+        let response_from_server = await res.json()
+        console.log(response_from_server)
+      } catch (err) {
+        console.log(err)
+      }
+    }
+    sendTZOffsetToServer();
+  </script>
+  <% } %>
 </body>
 
 </html>

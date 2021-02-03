@@ -110,9 +110,9 @@ function habitDetail(req, res, next) {
 }
 
 // calculate streak if given an array of dates in chronological order - ie., [5 days ago, 2 days ago, today]
-function calculateStreak(dates, timezone_offset_in_hours) {
+function calculateStreak(dates) {
     let current_date = new Date()
-    current_date.setHours(timezone_offset_in_hours,0,0,0)
+    current_date.setHours(0,0,0,0)
     let streak = 0
     for (let i = dates.length -1; i >= 0; i--) {
         while(i >= 0 && dates[i].getTime() == current_date.getTime()) {
@@ -149,20 +149,32 @@ function completeHabit(req, res, next) {
             if(habit.id === req.params.id) {
                 console.log(habit.completed);
                 habit.completed = true;
+                let today_right_now = new Date()
 
-                // Add today's date to this habit's completed_dates (if today isn't already there)
-                // warning: these dates are all local server time. ideal:UTC
-                // ideally, you'd ask the user for their timezone and store dates at usertime midnight for resetting correctly
-                let today = new Date()
-                // let current_timezone_offset_in_hours = today.getTimezoneOffset() / 60;
-                // console.log("you are",current_timezone_offset_in_hours,"hours ahead of UTC")
-                // console.log("local time is",today.toLocaleString())
-                // today.setHours(-1*current_timezone_offset_in_hours,0,0,0)
-                // console.log("local time is",today.toLocaleString())
-                today.setHours(req.user.timezone_offset_in_hours,0,0,0)
-                today_exists_in_log = habit.completed_dates.some(date_in_log => date_in_log.getTime() == today.getTime())
+                // logging the correct date is an interesting process, assuming our server is in UTC time. 
+                // For example, if i'm i'm GMT-5 right now, then our server is in the FUTURE by 5 hours. That is:
+                // when i log an activity from 7pm-11:59pm, i expect it to show up as TODAY but it shows up as TOMORROW (server sees 12am-459am)
+                // when i log an activity from 12am-6:59pm, i expect it to show up as TODAY and it shows up as TODAY (server sees 5am-11:59pm)
+                // Rephrasing from the server's point of view: if our user is behind UTC time by an OFFSET of -5, we must do this:
+                //     if server time is in the interval [12am, 5 am), i will put in yesterday's date
+                //     else if server time is in the interval [5 am, 11:59pm], i will put in today's date
+                if (req.user.UTC_offset_in_hours < 0) {
+                    let today_at_0_00 = new Date(today_right_now.getFullYear(), today_right_now.getMonth(), today_right_now.getDate(), 0, 0);
+                    let today_at_5_00_am = new Date(today_right_now.getFullYear(), today_right_now.getMonth(), today_right_now.getDate(), -1*req.user.UTC_offset_in_hours, 0);
+                    let today_at_11_59pm = new Date(today_right_now.getFullYear(), today_right_now.getMonth(), today_right_now.getDate(), 23, 59);
+                    if (today_right_now >= today_at_0_00 && today_right_now < today_at_5_00_am) {
+                        today_right_now.setDate(today_right_now.getDate() - 1) // go back in time one day.
+                        today_right_now.setHours(0,0,0,0)
+                    } else if (today_right_now >= today_at_5_00_am && today_right_now < today_at_11_59pm) {
+                        today_right_now.setHours(0,0,0,0)
+                    }
+                } else {
+                    today_right_now.setHours(0,0,0,0)
+                } // TODO: put in an else if for GMT > 0 .. eg., if we're ever in europe
+                
+                today_exists_in_log = habit.completed_dates.some(date_in_log => date_in_log.getTime() == today_right_now.getTime())
                 if (!today_exists_in_log) {
-                    habit.completed_dates.push(today);
+                    habit.completed_dates.push(today_right_now);
                 }
 
                 console.log(habit.completed);
@@ -257,12 +269,10 @@ function showAll(req, res, next) {
 
 function setUTCOffset(req, res, next) {
     let person = req.user;
-    req.user.timezone_offset_in_hours = req.body.offset;
+    console.log("received offset",req.body)
+    req.user.UTC_offset_in_hours = parseInt(req.body.offset)*-1;
     req.user.save(function(err) {
-        res.render('users/all', {
-            user:req.user,
-            person,
-            calculateStreak: calculateStreak,
-        });
+        if(err) return res.json("something went wrong")
+        res.json({"server_says":"ok user timezone set to "+req.body.offset})
     });
 }
