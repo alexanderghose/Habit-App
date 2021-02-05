@@ -60,7 +60,7 @@ function delRole(req, res, next) {
 function roleDetail(req, res, next) {
     req.user.roles.forEach(function(role) {
         if(role.id == req.params.id) {
-            res.render('users/role', {role, calculateStreak: calculateStreak});
+            res.render('users/role', {role, user:req.user, calculateStreak: calculateStreak});
         }
     }); 
 }
@@ -110,9 +110,33 @@ function habitDetail(req, res, next) {
 }
 
 // calculate streak if given an array of dates in chronological order - ie., [5 days ago, 2 days ago, today]
-function calculateStreak(dates) {
+function calculateStreak(dates, user_utc_offset) {
     let current_date = new Date()
-    current_date.setHours(0,0,0,0)
+    
+    // calculating streaks involves comparing the "completed" dates against today.
+    // but midnight server time (eg., UTC time for heroku) may not match midnight of the user's time
+    // For example, if I, the user, am at GMT-5, then our server is in the FUTURE by 5 hours. That is:
+    //  if I do an activity earlier today, say, at 12am, and then check for streaks later in the day, the time matters:
+    //  if i check for streaks between 7pm-11:59pm, i expect a streak of 1 but server will show 0
+    //           because the server thinks we're at tomorrow already, so will show a streak of 0 (srv sees 12am-459am)
+    // if i check for streaks between 12am-6:59pm, i expect a streak of 1 and server will show 1 (srv sees 5am-11:59pm)
+    // ie., from the server's POV, if our user is behind UTC by an offset of -5, we must do this:
+    // if server time is in the interval [12am, 4:59am], srv should pretend today is yesterday for streak calculation
+    // if server time is in the interval [5am, 11:59pm], srv should consider today to be today
+    if (user_utc_offset < 0) { // user is GMT-1 to GMT-12
+        let today_at_0_00 = new Date(current_date.getFullYear(), current_date.getMonth(), current_date.getDate(), 0, 0);
+        let today_at_5_00_am = new Date(current_date.getFullYear(), current_date.getMonth(), current_date.getDate(), -1*user_utc_offset, 0);
+        let today_at_11_59pm = new Date(current_date.getFullYear(), current_date.getMonth(), current_date.getDate(), 23, 59);
+        if (current_date >= today_at_0_00 && current_date < today_at_5_00_am) {
+            current_date.setDate(current_date.getDate() - 1) // go back in time one day.
+            current_date.setHours(0,0,0,0)
+        } else if (current_date >= today_at_5_00_am && current_date < today_at_11_59pm) {
+            current_date.setHours(0,0,0,0)
+        }
+    } else { // TODO: if user is GMT+1 to GMT+12, put in the correct calculation for europe and asia!
+        current_date.setHours(0,0,0,0)
+    }
+    
     let streak = 0
     for (let i = dates.length -1; i >= 0; i--) {
         while(i >= 0 && dates[i].getTime() == current_date.getTime()) {
@@ -170,7 +194,7 @@ function completeHabit(req, res, next) {
                     }
                 } else {
                     today_right_now.setHours(0,0,0,0)
-                } // TODO: put in an else if for GMT > 0 .. eg., if we're ever in europe
+                } // TODO: put in an else if for GMT > 0 .. eg., if we're ever in europe or asia
                 
                 today_exists_in_log = habit.completed_dates.some(date_in_log => date_in_log.getTime() == today_right_now.getTime())
                 if (!today_exists_in_log) {
@@ -255,7 +279,7 @@ function delTask(req, res, next) {
 
 function showTasks(req, res, next) {
     let person = req.user;
-    res.render('users/tasks', {person});
+    res.render('users/tasks', {person, user:req.user});
 }
 
 function showAll(req, res, next) {
